@@ -173,6 +173,14 @@
             contestNameNode.style.height = "10px";
 
             let n = contestRows[i].children[3].textContent;
+
+            const name = contestRows[i].children[1].textContent;
+
+            if (name.substr(name.length - 1) === "M") {
+                n = n.concat(" - MULTI");
+
+            }
+
             n = n.concat(" - " + contestRows[i].children[2].textContent);
             n = n.concat(" = " + percent.toString() + "%");
             if (contestRows[i].children[1].textContent.indexOf("[")+1) {
