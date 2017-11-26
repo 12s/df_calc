@@ -1,0 +1,103 @@
+// ==UserScript==
+// @name         Yahoo DF exit
+// @namespace    https://sports.yahoo.com/dailyfantasy/contest
+// @version      0.1
+// @description  calc percentages
+// @author       --
+// @include      https://sports.yahoo.com/dailyfantasy/contests/upcoming
+// @include      https://sports.yahoo.com/dailyfantasy/contest/*
+// @require http://code.jquery.com/jquery-latest.js
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    console.clear();
+
+    const checkThresholds = function () {
+        const tableRows = document.querySelectorAll(`tr`);
+        tableRows.forEach((tr) => {
+            if (tr.children[3] && tr.children[3].textContent.includes("$")) {
+
+                const entry = tr.children[1].textContent;
+                const entered =      Number(entry.substr(0, entry.indexOf("/")).replace(/[^0-9\.-]+/g,""));
+                const totalEntries = Number(entry.substr(entry.indexOf("/")+1).replace(/[^0-9\.-]+/g,""));
+                const prizePool = Number(tr.children[3].textContent.replace(/[^0-9\.-]+/g,""));
+                const entryFee = tr.children[2].textContent.replace(/[^0-9\.-]+/g,"");
+                const fillRatio = entered * entryFee / prizePool;
+
+                if (entryFee > 0 && fillRatio > 0.99) {
+                    // contest is 100% full or greator. Lets bail.
+                    console.log(`bailing from ${tr.children[0].lastElementChild.textContent} :: more than 99 full  ::val = ${fillRatio}`);
+                    window.open(tr.children[5].firstElementChild.href, "_blank");
+                } else {
+                    console.log(`${tr.children[0].lastElementChild.textContent} is currently ${fillRatio} full. still ${0.99 - (fillRatio)} buffer remaining`);
+                }
+            }
+        });
+    };
+
+
+    const href = window.location.href;
+
+    if (href.includes("upcoming")) {
+        // upcoming portion
+        let lineupsToExit = checkThresholds();
+    } else if (href.includes("/contest/")) {
+        // edit Lineup portion
+
+        const href = document.querySelector("a[data-tst='edit-entry']");
+        if (href) {
+            window.open(href.href, "_blank");
+        } else {
+            console.log(`before we cancel, lets check odds again, because maybe we are joining on this page..`);
+
+            const odds = document.querySelectorAll(".Fz-m");
+            if (odds && odds.length === 8) {
+                const entriesString = odds[2].firstElementChild.textContent;
+                const entered =      Number(entriesString.substr(0, entriesString.indexOf("/")).replace(/[^0-9\.-]+/g,""));
+                const totalEntries = Number(entriesString.substr(entriesString.indexOf("/")+1).replace(/[^0-9\.-]+/g,""));
+                const prizePool = Number(odds[4].lastElementChild.textContent.replace(/[^0-9\.-]+/g,""));
+                const entryFee = Number(odds[3].lastElementChild.textContent.replace(/[^0-9\.-]+/g,""));
+                const fillRatio = entered * entryFee / prizePool;
+
+                if (fillRatio > 0.99) {
+                    console.log("bail on contest:: its:", fillRatio);
+                    const cancel = document.querySelector("a[data-tst='cancel-entry']");
+                    if (cancel) {
+                        let j = 0;
+                        cancel.click();
+
+                        const comfirmQuit = function() {
+                            const confirmQuitEl = document.querySelector("a[data-tst='confirm-cancel-entry']");
+
+                            if (!confirmQuitEl) {
+                                console.log('try again later - 1 second');
+                                j++;
+                                if (j > 2) {
+                                    cancel.click();
+                                }
+                                window.setTimeout(comfirmQuit, 1000);
+                            } else {
+                                console.log(`bailing on contest:)`);
+                                confirmQuitEl.click();
+                                return;
+                            }
+                        };
+                        window.setTimeout(comfirmQuit, 1000);
+                    } else {
+                        console.log(`exit script: couldn't find cancel button`);
+                    }
+                } else {
+                    console.log(`contest isn't full its : `, fillRatio);
+                }
+            } else {
+                return;
+            }
+
+        }
+    }
+
+
+})
+();
